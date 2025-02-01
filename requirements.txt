@@ -1,0 +1,9 @@
+pymongo
+streamlit
+together
+Pillow
+requests
+langchain
+langchain-core
+fastembed
+sentence-transformers
