@@ -93,69 +93,21 @@ def handle_special_queries(user_input):
         return "Hello! I’m **Novaspark**, your intelligent assistant. How can I help you today?"
     return None
 
-def filter_phones_by_query(user_input, data):
-    if not data:
-        return []
-    filtered_phones = []
-    
-    # Filter phones based on user query keywords
-    budget_limit = 20000  # Budget limit of ₹20K
-
-    # Filter based on user query keywords
-    if 'gaming' in user_input.lower():
-        filtered_phones = [
-            phone for phone in data 
-            if 'gaming' in str(phone.get('specifications', '')).lower() and float(phone.get('price', 0)) < budget_limit
-        ]
-    elif 'camera' in user_input.lower():
-        filtered_phones = [
-            phone for phone in data 
-            if 'camera' in str(phone.get('specifications', '')).lower() and float(phone.get('price', 0)) < budget_limit
-        ]
-    elif 'iphone' in user_input.lower():
-        filtered_phones = [
-            phone for phone in data 
-            if 'iphone' in phone.get('name', '').lower() and float(phone.get('price', 0)) < budget_limit
-        ]
-    else:
-        # For general query, filter only phones that are under ₹20K in your DB
-        filtered_phones = [
-            phone for phone in data 
-            if float(phone.get('price', 0)) < budget_limit
-        ]
-        
-    # Ensure only phones available in your database are shown
-    filtered_phones_in_db = [phone for phone in filtered_phones if phone in data]
-
-    return filtered_phones_in_db[:3]  # Return top 3 phones
-
-
-def build_phone_prompt(user_query, filtered_phones):
-    context = "\n".join(
-        f"Phone Name: {phone.get('name', 'N/A')}\n"
-        f"Price: ₹{phone.get('price', 'N/A')}\n"
-        f"Specifications: {phone.get('specifications', {})}\n"
-        for phone in filtered_phones
-    )
+def build_phone_prompt(user_query, data):
+    # Build a dynamic prompt based on user query
     prompt = (
-        "You are an expert phone advisor. Based on the following phone details:\n"
-        f"{context}\n\n"
-        "And given the user's query below, provide a thoughtful recommendation.\n"
-        f"User Query: {user_query}\nAnswer:"
+        f"You are an expert phone advisor. The user is asking about phones based on the following query:\n"
+        f"User Query: {user_query}\n\n"
+        "Please provide a recommendation for the best phones that match the query, considering the available phones in the database."
     )
     return prompt
 
 ##############################################
 # Main Streamlit Application
 ##############################################
-
-
 def main():
     st.set_page_config(page_title="Novaspark - Intelligent Phone Advisor", layout="wide")
     st.title("📱 Novaspark Intelligent Phone Advisor")
-
-
-
 
     # Main Input Box for the user to type their query
     user_input = st.text_input("🔍 Ask for phone recommendations or any query:")
@@ -171,21 +123,11 @@ def main():
         elif not is_phone_related(user_input):
             st.write("Please ask a phone-related query.")
         else:
-            filtered_phones = filter_phones_by_query(user_input, unique_phones)
-            prompt = build_phone_prompt(user_input, filtered_phones)
+            # Pass the query and the available phones to the model
+            prompt = build_phone_prompt(user_input, unique_phones)
             model_name = load_model()
             answer = generate_answer(prompt, model_name)
             st.write(answer)
-
-            if filtered_phones:
-                st.markdown("### Top Recommendations:")
-                for phone in filtered_phones:
-                    st.write(f"**Name:** {phone.get('name', 'N/A')}")
-                    st.write(f"**Price:** ₹{phone.get('price', 'N/A')}")
-                    st.write(f"**Specifications:** {phone.get('specifications', {})}")
-                    if phone.get("image"):
-                        st.image(phone["image"], use_container_width=True)
-                    st.write("---")
 
 if __name__ == "__main__":
     main()
