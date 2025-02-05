@@ -97,15 +97,34 @@ def filter_phones_by_query(user_input, data):
     if not data:
         return []
     filtered_phones = []
+    
+    # Filter phones based on budget (under ₹20K)
+    budget_limit = 20000
+    
+    # Filter based on user query keywords
     if 'gaming' in user_input.lower():
-        filtered_phones = [phone for phone in data if 'gaming' in str(phone.get('specifications', '')).lower() and float(phone.get('price', 0)) < 20000]
+        filtered_phones = [
+            phone for phone in data 
+            if 'gaming' in str(phone.get('specifications', '')).lower() and float(phone.get('price', 0)) < budget_limit
+        ]
     elif 'camera' in user_input.lower():
-        filtered_phones = [phone for phone in data if 'camera' in str(phone.get('specifications', '')).lower()]
+        filtered_phones = [
+            phone for phone in data 
+            if 'camera' in str(phone.get('specifications', '')).lower() and float(phone.get('price', 0)) < budget_limit
+        ]
     elif 'iphone' in user_input.lower():
-        filtered_phones = [phone for phone in data if 'iphone' in phone.get('name', '').lower()]
+        filtered_phones = [
+            phone for phone in data 
+            if 'iphone' in phone.get('name', '').lower() and float(phone.get('price', 0)) < budget_limit
+        ]
     else:
-        filtered_phones = data
-    return filtered_phones[:3]
+        # No specific query, return phones under ₹20K
+        filtered_phones = [
+            phone for phone in data 
+            if float(phone.get('price', 0)) < budget_limit
+        ]
+        
+    return filtered_phones[:3]  # Return top 3 phones
 
 def build_phone_prompt(user_query, filtered_phones):
     context = "\n".join(
