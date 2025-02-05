@@ -138,11 +138,11 @@ def main():
     keyword_placeholder = st.empty()
 
     # Placeholder rotation
-    for keyword in placeholder_keywords:
-        keyword_placeholder.text_input(keyword, key="user_input", label_visibility="hidden")
+    for i, keyword in enumerate(placeholder_keywords):
+        keyword_placeholder.text_input(keyword, key=f"placeholder_{i}", label_visibility="hidden")
         time.sleep(5)
 
-    user_input = keyword_placeholder.text_input("🔍 Ask for phone recommendations or any query:")
+    user_input = st.text_input("🔍 Ask for phone recommendations or any query:")
     
     data = fetch_data_from_mongo()
     unique_phones = remove_duplicates(data)
