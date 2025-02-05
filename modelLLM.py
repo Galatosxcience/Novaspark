@@ -34,7 +34,7 @@ def generate_answer(prompt, model_name):
                 {"role": "system", "content": "You are an expert phone advisor specialized in recommending phones."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=300,
+            max_tokens=500,
             temperature=0.7,
             top_p=0.7,
             stream=False
@@ -94,13 +94,42 @@ def handle_special_queries(user_input):
     return None
 
 def build_phone_prompt(user_query, data):
-    # Build a dynamic prompt based on user query
     prompt = (
         f"You are an expert phone advisor. The user is asking about phones based on the following query:\n"
         f"User Query: {user_query}\n\n"
         "Please provide a recommendation for the best phones that match the query, considering the available phones in the database."
     )
     return prompt
+
+def filter_phones_by_query(user_input, data):
+    if not data:
+        return []
+    
+    filtered_phones = []
+    
+    budget_limit = 20000  # Default Budget limit of ₹20K
+    if "under 40" in user_input.lower():
+        budget_limit = 40000  # Update to ₹40K for queries like "under 40K"
+    
+    # Filter phones based on user query keywords
+    if 'gaming' in user_input.lower():
+        filtered_phones = [
+            phone for phone in data 
+            if 'gaming' in str(phone.get('specifications', '')).lower() and float(phone.get('price', 0)) <= budget_limit
+        ]
+    elif 'camera' in user_input.lower():
+        filtered_phones = [
+            phone for phone in data 
+            if 'camera' in str(phone.get('specifications', '')).lower() and float(phone.get('price', 0)) <= budget_limit
+        ]
+    else:
+        filtered_phones = [
+            phone for phone in data 
+            if float(phone.get('price', 0)) <= budget_limit
+        ]
+    
+    # Return only top 3 recommendations
+    return filtered_phones[:3]
 
 ##############################################
 # Main Streamlit Application
@@ -123,11 +152,21 @@ def main():
         elif not is_phone_related(user_input):
             st.write("Please ask a phone-related query.")
         else:
-            # Pass the query and the available phones to the model
+            filtered_phones = filter_phones_by_query(user_input, unique_phones)
             prompt = build_phone_prompt(user_input, unique_phones)
             model_name = load_model()
             answer = generate_answer(prompt, model_name)
             st.write(answer)
+
+            if filtered_phones:
+                st.markdown("### Top 3 Gaming Phone Recommendations under 20K or 40K:")
+                for phone in filtered_phones:
+                    st.write(f"**Name:** {phone.get('name', 'N/A')}")
+                    st.write(f"**Price:** ₹{phone.get('price', 'N/A')}")
+                    st.write(f"**Specifications:** {phone.get('specifications', {})}")
+                    if phone.get("image"):
+                        st.image(phone["image"], use_container_width=True)
+                    st.write("---")
 
 if __name__ == "__main__":
     main()
