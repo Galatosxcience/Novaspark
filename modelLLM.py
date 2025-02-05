@@ -1,7 +1,7 @@
 import logging
 import streamlit as st
 import pymongo
-import time
+import re  # To extract budget dynamically
 from together import Together
 
 # Configure logging
@@ -93,39 +93,42 @@ def handle_special_queries(user_input):
         return "Hello! I’m **Novaspark**, your intelligent assistant. How can I help you today?"
     return None
 
-def build_phone_prompt(user_query, data):
-    prompt = (
-        f"You are an expert phone advisor. The user is asking about phones based on the following query:\n"
-        f"User Query: {user_query}\n\n"
-        "Please provide a recommendation for the best phones that match the query, considering the available phones in the database."
-    )
-    return prompt
+def extract_budget(user_input):
+    """
+    Extracts the budget from the user input using regular expressions.
+    The expected format is "under X" where X is a number (e.g., "under 20K", "under 80K").
+    """
+    match = re.search(r'under\s*(\d+)(?:k|K)', user_input)
+    if match:
+        return int(match.group(1)) * 1000  # Convert to full number (e.g., 20K -> 20000)
+    return None
 
 def filter_phones_by_query(user_input, data):
     if not data:
         return []
     
-    filtered_phones = []
+    # Extract budget from user input
+    budget = extract_budget(user_input)
+    if not budget:
+        budget = 20000  # Default to ₹20K if no budget is mentioned
     
-    budget_limit = 20000  # Default Budget limit of ₹20K
-    if "under 40" in user_input.lower():
-        budget_limit = 40000  # Update to ₹40K for queries like "under 40K"
+    filtered_phones = []
     
     # Filter phones based on user query keywords
     if 'gaming' in user_input.lower():
         filtered_phones = [
             phone for phone in data 
-            if 'gaming' in str(phone.get('specifications', '')).lower() and float(phone.get('price', 0)) <= budget_limit
+            if 'gaming' in str(phone.get('specifications', '')).lower() and float(phone.get('price', 0)) <= budget
         ]
     elif 'camera' in user_input.lower():
         filtered_phones = [
             phone for phone in data 
-            if 'camera' in str(phone.get('specifications', '')).lower() and float(phone.get('price', 0)) <= budget_limit
+            if 'camera' in str(phone.get('specifications', '')).lower() and float(phone.get('price', 0)) <= budget
         ]
     else:
         filtered_phones = [
             phone for phone in data 
-            if float(phone.get('price', 0)) <= budget_limit
+            if float(phone.get('price', 0)) <= budget
         ]
     
     # Return only top 3 recommendations
@@ -153,13 +156,13 @@ def main():
             st.write("Please ask a phone-related query.")
         else:
             filtered_phones = filter_phones_by_query(user_input, unique_phones)
-            prompt = build_phone_prompt(user_input, unique_phones)
+            prompt = f"User query: {user_input}.\n\n" + f"Filtered phones (up to {extract_budget(user_input)}):"
             model_name = load_model()
             answer = generate_answer(prompt, model_name)
             st.write(answer)
 
             if filtered_phones:
-                st.markdown("### Top 3 Gaming Phone Recommendations under 20K or 40K:")
+                st.markdown("### Top Recommendations:")
                 for phone in filtered_phones:
                     st.write(f"**Name:** {phone.get('name', 'N/A')}")
                     st.write(f"**Price:** ₹{phone.get('price', 'N/A')}")
