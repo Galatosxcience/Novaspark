@@ -98,9 +98,9 @@ def filter_phones_by_query(user_input, data):
         return []
     filtered_phones = []
     
-    # Filter phones based on budget (under ₹20K)
-    budget_limit = 20000
-    
+    # Filter phones based on user query keywords
+    budget_limit = 20000  # Budget limit of ₹20K
+
     # Filter based on user query keywords
     if 'gaming' in user_input.lower():
         filtered_phones = [
@@ -118,13 +118,17 @@ def filter_phones_by_query(user_input, data):
             if 'iphone' in phone.get('name', '').lower() and float(phone.get('price', 0)) < budget_limit
         ]
     else:
-        # No specific query, return phones under ₹20K
+        # For general query, filter only phones that are under ₹20K in your DB
         filtered_phones = [
             phone for phone in data 
             if float(phone.get('price', 0)) < budget_limit
         ]
         
-    return filtered_phones[:3]  # Return top 3 phones
+    # Ensure only phones available in your database are shown
+    filtered_phones_in_db = [phone for phone in filtered_phones if phone in data]
+
+    return filtered_phones_in_db[:3]  # Return top 3 phones
+
 
 def build_phone_prompt(user_query, filtered_phones):
     context = "\n".join(
