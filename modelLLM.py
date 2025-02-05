@@ -131,8 +131,7 @@ def main():
     st.set_page_config(page_title="Novaspark - Intelligent Phone Advisor", layout="wide")
     st.title("📱 Novaspark Intelligent Phone Advisor")
 
-    # Display fixed suggested queries above the input box
-    st.markdown("- **Ask for phone recommendations or any query**")
+
 
 
     # Main Input Box for the user to type their query
