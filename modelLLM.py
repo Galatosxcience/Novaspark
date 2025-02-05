@@ -1,6 +1,7 @@
 import logging
 import streamlit as st
 import pymongo
+import time
 from together import Together
 
 # Configure logging
@@ -76,16 +77,20 @@ def is_phone_related(query):
     return any(keyword in query.lower() for keyword in phone_keywords)
 
 def handle_special_queries(user_input):
-    if 'name' in user_input.lower() or 'who are you' in user_input.lower():
-        return "My name is **Novaspark**, created by **Novaspark Pvt Limited**. How can I assist you today?"
-    if 'created' in user_input.lower() or 'who created you' in user_input.lower():
+    user_input_lower = user_input.lower()
+    if 'name' in user_input_lower or 'who are you' in user_input_lower:
+        return "My name is **Novaspark**, your intelligent phone advisor. How can I assist you today?"
+    if 'created' in user_input_lower or 'who created you' in user_input_lower:
         return (
-            "I was created by **Novaspark Pvt Limited**, including these amazing team members:\n"
-            "- Ashik Shaji (shajipapen)\n"
-            "- Rojins Kannur\n"
-            "- Aljo (Gymen)\n"
-            "- Aldon Alphonese Tom (Magadi)"
+            "I was created by **Novaspark Pvt Limited**, with the following amazing founders:\n"
+            "- Aljo Joseph\n"
+            "- Aldon Alphonses Tom\n"
+            "- Ashik Shaji\n"
+            "- Rojin S. Martin\n"
+            "- Renny Thomas"
         )
+    if any(greeting in user_input_lower for greeting in ['hi', 'hello', 'hey', 'good morning', 'good evening', 'good afternoon']):
+        return "Hello! I’m **Novaspark**, your intelligent assistant. How can I help you today?"
     return None
 
 def filter_phones_by_query(user_input, data):
@@ -123,12 +128,25 @@ def build_phone_prompt(user_query, filtered_phones):
 def main():
     st.set_page_config(page_title="Novaspark - Intelligent Phone Advisor", layout="wide")
     st.title("📱 Novaspark Intelligent Phone Advisor")
+
+    # Rotating Placeholder Text
+    placeholder_keywords = [
+        "Who created you?", "🔍 Ask for phone recommendations or any query", 
+        "Who are the founders?", "Search for phones under 20k", 
+        "Find the best gaming phone", "What is the best iPhone?"
+    ]
+    keyword_placeholder = st.empty()
+
+    # Placeholder rotation
+    for keyword in placeholder_keywords:
+        keyword_placeholder.text_input(keyword, key="user_input", label_visibility="hidden")
+        time.sleep(5)
+
+    user_input = keyword_placeholder.text_input("🔍 Ask for phone recommendations or any query:")
     
     data = fetch_data_from_mongo()
     unique_phones = remove_duplicates(data)
 
-    user_input = st.text_input("🔍 Ask for phone recommendations or any query:")
-    
     if user_input:
         special_response = handle_special_queries(user_input)
         if special_response:
