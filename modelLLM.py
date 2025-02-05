@@ -123,8 +123,6 @@ def build_phone_prompt(user_query, filtered_phones):
 def main():
     st.set_page_config(page_title="Novaspark - Intelligent Phone Advisor", layout="wide")
     st.title("📱 Novaspark Intelligent Phone Advisor")
-    st.sidebar.image("https://via.placeholder.com/150?text=Novaspark", use_column_width=True)
-    st.sidebar.header("Novaspark Menu")
     
     data = fetch_data_from_mongo()
     unique_phones = remove_duplicates(data)
@@ -151,7 +149,7 @@ def main():
                     st.write(f"**Price:** ₹{phone.get('price', 'N/A')}")
                     st.write(f"**Specifications:** {phone.get('specifications', {})}")
                     if phone.get("image"):
-                        st.image(phone["image"], width=200)
+                        st.image(phone["image"], use_container_width=True)
                     st.write("---")
 
 if __name__ == "__main__":
