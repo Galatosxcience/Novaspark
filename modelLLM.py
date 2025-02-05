@@ -125,6 +125,8 @@ def build_phone_prompt(user_query, filtered_phones):
 ##############################################
 # Main Streamlit Application
 ##############################################
+
+
 def main():
     st.set_page_config(page_title="Novaspark - Intelligent Phone Advisor", layout="wide")
     st.title("📱 Novaspark Intelligent Phone Advisor")
@@ -135,15 +137,15 @@ def main():
         "Who are the founders?", "Search for phones under 20k", 
         "Find the best gaming phone", "What is the best iPhone?"
     ]
-    keyword_placeholder = st.empty()
-
-    # Placeholder rotation
-    for i, keyword in enumerate(placeholder_keywords):
-        keyword_placeholder.text_input(keyword, key=f"placeholder_{i}", label_visibility="hidden")
-        time.sleep(5)
-
-    user_input = st.text_input("🔍 Ask for phone recommendations or any query:")
     
+    # Display suggestions one after the other as plain text
+    for i, keyword in enumerate(placeholder_keywords):
+        st.markdown(f"**Suggested Query {i+1}:** {keyword}")
+        time.sleep(5)  # Wait 5 seconds before showing next suggestion
+
+    # User Input Box for queries
+    user_input = st.text_input("🔍 Ask for phone recommendations or any query:")
+
     data = fetch_data_from_mongo()
     unique_phones = remove_duplicates(data)
 
