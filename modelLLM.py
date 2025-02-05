@@ -131,25 +131,18 @@ def main():
     st.set_page_config(page_title="Novaspark - Intelligent Phone Advisor", layout="wide")
     st.title("📱 Novaspark Intelligent Phone Advisor")
 
-    # Rotating Placeholder Text
-    placeholder_keywords = [
-        "Who created you?", "🔍 Ask for phone recommendations or any query", 
-        "Who are the founders?", "Search for phones under 20k", 
-        "Find the best gaming phone", "What is the best iPhone?"
-    ]
-    
-    # Display suggestions one after the other as plain text
-    for i, keyword in enumerate(placeholder_keywords):
-        st.markdown(f"**Suggested Query {i+1}:** {keyword}")
-        time.sleep(5)  # Wait 5 seconds before showing next suggestion
+    # Display fixed suggested queries above the input box
+    st.markdown("- **Ask for phone recommendations or any query**")
 
-    # User Input Box for queries
+
+    # Main Input Box for the user to type their query
     user_input = st.text_input("🔍 Ask for phone recommendations or any query:")
 
-    data = fetch_data_from_mongo()
-    unique_phones = remove_duplicates(data)
-
+    # If user has typed something
     if user_input:
+        data = fetch_data_from_mongo()
+        unique_phones = remove_duplicates(data)
+
         special_response = handle_special_queries(user_input)
         if special_response:
             st.write(special_response)
