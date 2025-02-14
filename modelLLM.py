@@ -8,11 +8,11 @@ from together import Together
 import re
 
 # MongoDB Configuration
-MONGO_URI = st.secrets["MONGO_URI"]
-DB_NAME = st.secrets["DB_NAME"]
-COLLECTION_NAME = st.secrets["COLLECTION_NAME"]
-API_KEY = st.secrets["API_KEY"]
+MONGO_URI = st.secrets["mongo"]["uri"]
+DB_NAME = st.secrets["mongo"]["db_name"]
+COLLECTION_NAME = st.secrets["mongo"]["collection_name"]
 
+API_KEY = st.secrets["together"]["api_key"]
 client = Together(api_key=API_KEY)
 
 # Hugging Face Model for Embeddings
