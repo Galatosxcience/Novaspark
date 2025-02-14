@@ -217,7 +217,7 @@ def generate_casual_response(user_query):
 
 # Streamlit UI for RAG
 def main():
-    st.title("RAG Chat with Conversational Responses")
+    st.title("Novaspark AI Phone Finder")
     data = fetch_data_from_mongo()
     if not data:
         st.write("No data found or an error occurred.")
