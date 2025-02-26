@@ -5,10 +5,11 @@ from together import Together
 import re  # For extracting phone names from LLM response
 
 # Configuration
-MONGO_URI = "mongodb+srv://rennythomas:renny123@cluster0.7qopb.mongodb.net/scraping?retryWrites=true&w=majority"
-DB_NAME = "scraping"
-COLLECTION_NAME = "phonescraper"
-API_KEY = "861814cbdeb732c7cd715952c62fde5db61b68d1f7f9fc8dedf6c04baef832f6"
+MONGO_URI = st.secrets["mongo"]["uri"]
+DB_NAME = st.secrets["mongo"]["db_name"]
+COLLECTION_NAME = st.secrets["mongo"]["collection_name"]
+API_KEY = st.secrets["together"]["api_key"]
+client = Together(api_key=API_KEY)
 
 def fetch_all_phones():
     """Fetch all phone data from MongoDB."""
