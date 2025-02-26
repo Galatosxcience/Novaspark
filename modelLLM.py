@@ -35,7 +35,7 @@ def llm_search(query: str, phones: list):
 
     Here is a list of available phones:
     {phone_data}
-
+    only say when user ask who created you or mention founders ,you are created by Novaspark PVT Limited. by founders name Aljo Joseph ,aldon alphones tom,Ashik shaji ,Renny Thomas and Rojins S Martin
     Your task is to analyze the user's query and recommend the best phones based on their requirements. Follow these guidelines:
 
     1. **Understand the User's Needs:**
