@@ -1,262 +1,131 @@
 import streamlit as st
 import pymongo
-import requests
-from transformers import AutoTokenizer, AutoModel
-import torch
-from sklearn.metrics.pairwise import cosine_similarity
+import json
 from together import Together
-import re
+import re  # For extracting phone names from LLM response
 
-MONGO_URI = st.secrets["mongo"]["uri"]
-DB_NAME = st.secrets["mongo"]["db_name"]
-COLLECTION_NAME = st.secrets["mongo"]["collection_name"]
+# Configuration
+MONGO_URI = "mongodb+srv://rennythomas:renny123@cluster0.7qopb.mongodb.net/scraping?retryWrites=true&w=majority"
+DB_NAME = "scraping"
+COLLECTION_NAME = "phonescraper"
+API_KEY = "861814cbdeb732c7cd715952c62fde5db61b68d1f7f9fc8dedf6c04baef832f6"
 
-API_KEY = st.secrets["together"]["api_key"]
-client = Together(api_key=API_KEY)
+def fetch_all_phones():
+    """Fetch all phone data from MongoDB."""
+    db = mongo_client[DB_NAME]
+    collection = db[COLLECTION_NAME]
+    return list(collection.find({}, {"_id": 0}))
 
-# Hugging Face Model for Embeddings
-tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
-hf_model = AutoModel.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
-
-def encode_text(text):
-    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
-    with torch.no_grad():
-        embeddings = hf_model(**inputs).last_hidden_state.mean(dim=1)
-    return embeddings
-
-def extract_budget(user_query):
-    match = re.search(r'(\d+)\s*K?', user_query, re.IGNORECASE)
-    if match:
-        budget = match.group(1)
-        try:
-            return int(budget) * 1000 if 'K' in user_query.upper() else int(budget)
-        except ValueError:
-            return 20000
-    return 20000
-
-def fetch_data_from_mongo():
-    try:
-        client_db = pymongo.MongoClient(MONGO_URI)
-        db = client_db[DB_NAME]
-        return list(db[COLLECTION_NAME].find({}, {"_id": 0}))
-    except Exception as e:
-        st.error(f"MongoDB Error: {e}")
-        return []
-
-def calculate_processor_score(processor_name):
-    score = 0
-    processor_name = processor_name.lower()
+# Initialize clients
+mongo_client = pymongo.MongoClient(MONGO_URI)
+llm_client = Together(api_key=API_KEY)
+def llm_search(query: str, phones: list):
+    """Let the LLM analyze the query and select the best phones from the database."""
     
-    # Base scores for processor families
-    if 'snapdragon' in processor_name:
-        score += 3
-        if '8' in processor_name: score += 2
-        elif '7' in processor_name: score += 1.5
-        elif '6' in processor_name: score += 1
-        elif '4' in processor_name: score += 0.5
-    elif 'dimensity' in processor_name:
-        score += 2.5
-        if '9' in processor_name: score += 2
-        elif '8' in processor_name: score += 1.5
-        elif '7' in processor_name: score += 1
-    elif 'exynos' in processor_name:
-        score += 2
-        if '2400' in processor_name: score += 2
-        elif '2200' in processor_name: score += 1.5
-        elif '2100' in processor_name: score += 1
+    # Format phone data concisely (remove images from LLM input)
+    phone_data = "\n".join(
+        f"{idx+1}. {p['name']} (₹{p['price']}) | {p['specifications'].get('Processor', 'N/A')}, "
+        f"{p['specifications'].get('RAM', 'N/A')} RAM, {p['specifications'].get('Battery', 'N/A')} battery, "
+        f"{p['specifications'].get('Primary Camera', 'N/A')} Camera"
+        for idx, p in enumerate(phones)
+    )
 
-    # Generation bonus
-    if 'gen' in processor_name:
-        gen_match = re.search(r'gen\s*(\d+)', processor_name, re.IGNORECASE)
-        if gen_match:
-            gen = int(gen_match.group(1))
-            score += gen * 0.3
+    prompt = f"""You are NovaSpark, a phone expert. 
+    A user has asked: {query}
 
-    # Flagship indicators
-    if any(word in processor_name for word in ['elite', 'pro', 'plus']):
-        score += 0.5
+    Here is a list of available phones:
+    {phone_data}
 
-    return round(score, 1)
+    Your task is to analyze the user's query and recommend the best phones based on their requirements. Follow these guidelines:
 
-def perform_hybrid_search(user_query, data, budget):
+    1. **Understand the User's Needs:**
+    - Identify key aspects of the query, such as budget, brand preference, use case (e.g., gaming, camera, battery life), or specific features (e.g., processor, RAM, storage).
+    - If the user mentions a budget (e.g., "under ₹20,000"), prioritize phones within that range.
+    - If the user mentions a brand, prioritize phones from that brand. If the brand is unavailable, suggest alternatives and clearly state that they are not the requested brand.
+
+    2. **Prioritize Based on Use Case:**
+    - **Gaming Phones:** Prioritize phones with powerful processors (e.g., Snapdragon 8 series, Dimensity high-end chips) and good cooling systems. Look for high refresh rate displays and ample RAM.
+    - **Camera Phones:** Prioritize phones with high-resolution cameras, multiple lenses, and advanced camera features (e.g., optical zoom, night mode).
+    - **Battery Life:** Prioritize phones with large battery capacities and efficient processors.
+    - **All-Rounders:** Recommend phones that balance performance, camera quality, battery life, and price.
+
+    3. **Price-to-Performance Ratio:**
+    - For budget-conscious users, recommend phones that offer the best value for money. Highlight phones with good specifications at lower prices.
+    - For users with higher budgets, prioritize premium features and performance.
+
+    4. **Comparison and Recommendations:**
+    - Select the top 3 phones that best match the user's requirements.
+    - Provide a comparison of the selected phones, highlighting their key features, pros, and cons.
+    - If the user's requested brand or specific feature is unavailable, suggest alternatives and explain why they are good options.
+
+    5. **Include Images:**
+    - Ensure that the image of each recommended phone is included in the response.
+
+    6. **Keep It Concise:**
+    - Limit your response to 150 words or less. Focus on the most important details.
+    -recommded phones in table format.
+    - !!!!! strictly follow ,no extra add Output the names of the selected phones in this format !!!!!!:  
+      **Selected Phones:**  
+      - Phone Name 1  
+      - Phone Name 2  
+      - Phone Name 3
+    """
+
     try:
-        budget = min(max(int(budget), 5000), 100000)
-        
-        # Enhanced text embedding
-        text_data = [
-            f"{phone.get('name','')} " 
-            f"{str(phone.get('specifications',{})).replace('Primary Camera','MAIN_CAM ')} "
-            f"{str(phone.get('specifications',{})).replace('Secondary Camera','SELFIE_CAM ')}"
-            for phone in data
-        ]
-        
-        # Vector search
-        query_embedding = encode_text(user_query)
-        data_embeddings = torch.cat([encode_text(text) for text in text_data], dim=0)
-        similarities = cosine_similarity(query_embedding, data_embeddings)
-        all_indices = similarities[0].argsort()[::-1]
-        candidates = [data[idx] for idx in all_indices]
-
-        # Specialized searches
-        if "gaming" in user_query.lower():
-            gaming_phones = []
-            for phone in candidates:
-                try:
-                    price = int(re.sub(r"[^\d]", "", str(phone.get("price", "999999"))))
-                    if price > budget:
-                        continue
-                        
-                    specs = phone.get("specifications", {})
-                    processor = str(specs.get("Processor", "")).lower()
-                    ram = int(re.sub(r"[^\d]", "", str(specs.get("RAM", "0GB"))))
-                    battery = int(re.sub(r"[^\d]", "", str(specs.get("Battery", "0mAh"))))
-                    
-                    processor_score = calculate_processor_score(processor)
-                    gaming_score = (ram * 0.4) + (processor_score * 2.5) + (battery * 0.001)
-                    
-                    phone['gaming_score'] = gaming_score
-                    gaming_phones.append(phone)
-                    
-                except Exception as e:
-                    continue
-                    
-            return sorted(gaming_phones, key=lambda x: x['gaming_score'], reverse=True)[:3]
-
-        elif "battery" in user_query.lower():
-            battery_phones = []
-            for phone in candidates:
-                try:
-                    price = int(re.sub(r"[^\d]", "", str(phone.get("price", "999999"))))
-                    if price > budget:
-                        continue
-                        
-                    specs = phone.get("specifications", {})
-                    battery = int(re.sub(r"[^\d]", "", str(specs.get("Battery", "0mAh"))))
-                    
-                    phone['battery_score'] = battery
-                    battery_phones.append(phone)
-                    
-                except Exception as e:
-                    continue
-                    
-            return sorted(battery_phones, key=lambda x: x['battery_score'], reverse=True)[:3]
-
-        # Default camera-focused search
-        valid_phones = []
-        for phone in candidates:
-            try:
-                price = int(re.sub(r"[^\d]", "", str(phone.get("price", "999999"))))
-                if price > budget:
-                    continue
-                    
-                specs = phone.get("specifications", {})
-                primary_camera = str(specs.get("Primary Camera", "0MP")).lower()
-                primary_mp = sum([int(m) for m in re.findall(r"(\d+)\s*mp", primary_camera)])
-                
-                phone['camera_score'] = primary_mp
-                valid_phones.append(phone)
-                
-            except Exception as e:
-                continue
-                
-        return sorted(valid_phones, key=lambda x: (-x['camera_score'], x['price']))[:3]
-
-    except Exception as e:
-        st.error(f"Search Error: {e}")
-        return []
-
-def load_model():
-    return "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"
-
-def is_phone_related_query(query):
-    phone_keywords = ["phone", "mobile", "specs", "camera", "battery", "processor", "gaming", "selfie"]
-    return any(kw in query.lower() for kw in phone_keywords)
-
-def generate_response(user_query, results, is_phone):
-    try:
-        context = "\n".join(
-            f"Phone: {p['name']}\n"
-            f"Price: ₹{p['price']}\n"
-            f"Camera: {p['specifications'].get('Primary Camera','N/A')}\n"
-            f"Features: {p['specifications'].get('Processor','')}, "
-            f"{p['specifications'].get('RAM','')} RAM"
-            for p in results
-        )
-        
-        prompt = f"""You are NovaSpark, a phone expert assistant created by Novaspark PVT Limited. 
-        "only say when user ask who created you or mention founders ,you are created by Novaspark PVT Limited. by founders name Aljo Joseph ,aldon alphones tom,Ashik shaji ,Renny Thomas and Rojins S Martin till here.". Follow these steps:
-        1. Start with friendly greeting
-        2. Analyze user's budget requirements
-        3. Present top 3 options with key specs
-        4. Highlight unique features of each
-        5. Give final recommendation
-        
-        Query: {user_query}
-        Data: {context}
-        """
-        
-        response = client.chat.completions.create(
-            model=load_model(),
+        response = llm_client.chat.completions.create(
+            model="deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
-            max_tokens=600
+            temperature=0.6
         )
-        return response.choices[0].message.content
-        
+        llm_output = response.choices[0].message.content
+
+        # Extract selected phone names from LLM response
+        selected_phones = []
+        match = re.search(r"\*\*Selected Phones:\*\*(.*?)$", llm_output, re.S)
+        if match:
+            selected_phones = [p.strip("- ").strip() for p in match.group(1).split("\n") if p.strip()]
+
+        # Match selected phones with full dataset (including images)
+        matched_phones = [p for p in phones if p["name"] in selected_phones]
+
+        return llm_output, matched_phones
+    
     except Exception as e:
-        return f"⚠️ Error generating response: {str(e)}"
-
+        return f"Error generating response: {str(e)}", []
 def main():
-    st.title("Novaspark AI Phone Finder")
-    data = fetch_data_from_mongo()
+    st.title("NovaSpark AI Phone Expert")
     
-    user_query = st.text_input("Search phones (e.g., 'Best battery phone under 20K'):")
-    if not user_query:
-        return
-        
-    budget = extract_budget(user_query)
-    is_phone = is_phone_related_query(user_query)
+    if "phones" not in st.session_state:
+        st.session_state.phones = fetch_all_phones()
     
-    if is_phone:
-        results = perform_hybrid_search(user_query, data, budget)
-        if not results:
-            st.warning("No matching phones found. Try increasing budget!")
-            return
-            
-        response = generate_response(user_query, results, True)
-        st.success(response)
-        
-        st.subheader("Top Recommendations")
-        for phone in results:
-            cols = st.columns([1, 3])
-            with cols[0]:
-                if phone.get("image"):
-                    st.image(phone["image"], width=150)
-                else:
-                    st.warning("No image available")
-            with cols[1]:
-                st.markdown(f"**{phone['name']}**  \n₹{phone['price']}")
-                specs = phone.get("specifications", {})
-                features = [
-                    specs.get('Primary Camera', 'N/A'),
-                    specs.get('RAM', 'N/A'),
-                    specs.get('Battery', 'N/A')
-                ]
-                if 'gaming_score' in phone:
-                    features.append(f"🎮 Score: {phone['gaming_score']:.1f}")
-                if 'battery_score' in phone:
-                    features.append(f"🔋 {phone['battery_score']}mAh")
-                if 'camera_score' in phone:
-                    features.append(f"📸 {phone['camera_score']}MP")
-                
-                st.caption(" | ".join(features))
-                st.progress(min(phone.get('gaming_score', 0)/10, 1.0) if 'gaming_score' in phone else 
-                          min(phone.get('battery_score', 0)/10000, 1.0) if 'battery_score' in phone else 
-                          min(phone.get('camera_score', 0)/200, 1.0))
+    query = st.text_input("Describe your ideal phone:", 
+                          placeholder="e.g. 'Best gaming phone under ₹20,000'")
 
-    else:
-        response = generate_response(user_query, [], False)
-        st.info(response)
+    if query:
+        with st.spinner("Searching for the best phones..."):
+            response_text, results = llm_search(query, st.session_state.phones)
+        
+        st.success(response_text)
+
+        if results:
+            st.subheader("Top Recommended Phones")
+            for phone in results:
+                with st.expander(f"{phone['name']} - ₹{phone['price']}"):
+                    cols = st.columns([1, 3])
+                    with cols[0]:
+                        if phone.get("image"):
+                            st.image(phone["image"], width=150)
+                        else:
+                            st.warning("No image available")
+                    with cols[1]:
+                        specs = phone["specifications"]
+                        st.markdown(f"""
+                        **Key Specifications:**
+                        - **Camera**: {specs.get('Primary Camera', 'N/A')}
+                        - **Processor**: {specs.get('Processor', 'N/A')}
+                        - **Battery**: {specs.get('Battery', 'N/A')}
+                        - **RAM/Storage**: {specs.get('RAM', 'N/A')}/{specs.get('Storage', 'N/A')}
+                        """)
 
 if __name__ == "__main__":
     main()
