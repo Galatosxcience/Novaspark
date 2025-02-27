@@ -80,7 +80,7 @@ def llm_search(query: str, phones: list):
 
     try:
         response = llm_client.chat.completions.create(
-            model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
+            model="deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.6
         )
