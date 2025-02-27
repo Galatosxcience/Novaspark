@@ -67,6 +67,7 @@ def llm_search(query: str, phones: list):
 
     Final Output:
     - Provide a clear and concise response with the top 3 recommendations.
+    -if user ask for extact phone display only that one,also add emoji to overall response.
     - Include a comparison table or bullet points highlighting the key features of each phone.
     - Ensure that the response is well-structured and in table format.
     -explan like a phone expert.show Selected Phones at last along with response.
