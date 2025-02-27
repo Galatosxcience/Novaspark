@@ -69,7 +69,8 @@ def llm_search(query: str, phones: list):
     - Provide a clear and concise response with the top 3 recommendations.
     - Include a comparison table or bullet points highlighting the key features of each phone.
     - Ensure that the response is well-structured and in table format.
-        -explan like a phone expert.show Selected Phones at last along with response.
+    -explan like a phone expert.show Selected Phones at last along with response.
+    !!Must include name as same as db below as well,,as extact format its for retreving image from db.
     - Use this exact format for final selection:
     **Selected Phones:**
     - Exact Phone Name 1
