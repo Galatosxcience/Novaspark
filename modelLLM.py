@@ -70,7 +70,6 @@ def llm_search(query: str, phones: list):
     - Include a comparison table or bullet points highlighting the key features of each phone.
     - Ensure that the response is well-structured and in table format.
         -explan like a phone expert.show Selected Phones at last along with response.
-    - List selected phones EXACTLY as they appear in the database
     - Use this exact format for final selection:
     **Selected Phones:**
     - Exact Phone Name 1
