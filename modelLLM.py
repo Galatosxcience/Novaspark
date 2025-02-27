@@ -66,7 +66,6 @@ def llm_search(query: str, phones: list):
     ******final output********
     -only when user serch for phone recommded phones in table format.otherwise force them to ask about phone related qury
     - Provide a clear and concise response with the top 3 recommendations if only user serch for specfic phone give only that.
-    -also inculde iphone and android.
     - Include a comparison table or bullet points highlighting the key features of each phone.
     - Ensure that the response is well-structured and in table format.
     -add prons and cons.
