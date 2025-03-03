@@ -34,7 +34,7 @@ def llm_search(query: str, phones: list):
 
 
 
-     prompt = f"""You are NovaSpark, a phone expert. 
+    prompt = f"""You are NovaSpark, a phone expert. 
         A user has asked: {query}
 
         Here is a list of available phones:
