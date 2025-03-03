@@ -5,11 +5,10 @@ from together import Together
 import re  # For extracting phone names from LLM response
 
 # Configuration
-MONGO_URI = st.secrets["mongo"]["uri"]
-DB_NAME = st.secrets["mongo"]["db_name"]
-COLLECTION_NAME = st.secrets["mongo"]["collection_name"]
-API_KEY = st.secrets["together"]["api_key"]
-client = Together(api_key=API_KEY)
+MONGO_URI = "mongodb+srv://rennythomas:renny123@cluster0.7qopb.mongodb.net/scraping?retryWrites=true&w=majority"
+DB_NAME = "scraping"
+COLLECTION_NAME = "phonescraper"
+API_KEY = "861814cbdeb732c7cd715952c62fde5db61b68d1f7f9fc8dedf6c04baef832f6"
 
 def fetch_all_phones():
     """Fetch all phone data from MongoDB."""
@@ -37,7 +36,7 @@ def llm_search(query: str, phones: list):
     Here is a list of available phones:
     {phone_data}
 
-    Your task is to analyze the user's query and recommend the best phones based on their requirements. Follow these guidelines:
+    Your task is to analyze the user's query and recommend the best phones based on their requirements. Follow these guidelines strictly:
 
     1. **Understand the User's Needs:**
     - Identify key aspects of the query, such as budget, brand preference, use case (e.g., gaming, camera, battery life), or specific features (e.g., processor, RAM, storage).
@@ -68,7 +67,7 @@ def llm_search(query: str, phones: list):
     Final Output:
     - Provide a clear and concise response with the top 3 recommendations.
     -if user ask for extact phone display only that one,also add emoji to overall response.
-    - Include a comparison table or bullet points highlighting the key features of each phone.
+    - should inculde bullet points highlighting the key features of each phone.
     - Ensure that the response is well-structured and in table format.
     -explan like a phone expert.show Selected Phones at last along with response.
     !!Must include name as same as db below as well,,as extact format its for retreving image from db.
